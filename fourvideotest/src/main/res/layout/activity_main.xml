@@ -58,18 +58,17 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentBottom="true" />
         </RelativeLayout>
-		
-		<View
-        android:background="#FFFFFFFF"
-        android:layout_width="5dp"
-        android:layout_height="match_parent"/>
-			
+
+        <View
+            android:layout_width="5dp"
+            android:layout_height="match_parent"
+            android:background="#FFFFFFFF" />
+
         <RelativeLayout
             android:id="@+id/surface2"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="horizontal">
+            android:layout_weight="1">
 
             <TextureView
                 android:id="@+id/video1"
@@ -108,15 +107,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentBottom="true" />
+
+            <ImageView
+                android:id="@+id/ic_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="5dp"
+                android:layout_marginTop="5dp"
+                android:scaleType="center"
+                android:src="@drawable/ic_settings_black_24dp" />
         </RelativeLayout>
 
     </LinearLayout>
-	
-	<View
-        android:background="#FFFFFFFF"
+
+    <View
         android:layout_width="match_parent"
-        android:layout_height="5dp"/>
-	
+        android:layout_height="5dp"
+        android:background="#FFFFFFFF" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -169,10 +178,10 @@
                 android:layout_alignParentBottom="true" />
         </RelativeLayout>
 
-		<View
-        android:background="#FFFFFFFF"
-        android:layout_width="5dp"
-        android:layout_height="match_parent"/>
+        <View
+            android:layout_width="5dp"
+            android:layout_height="match_parent"
+            android:background="#FFFFFFFF" />
 
         <RelativeLayout
             android:id="@+id/surface4"
@@ -221,6 +230,5 @@
         </RelativeLayout>
 
     </LinearLayout>
-
 
 </LinearLayout>

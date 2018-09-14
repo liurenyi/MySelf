@@ -13,7 +13,7 @@ public class RecorderParameter {
 
     public static int mOutFormatMP4 = MediaRecorder.OutputFormat.MPEG_4; //控制视频文件的编码格式
 
-    public static int mFrameRate = 30; //控制视频文件的帧率
+    public static int mFrameRate = 25; //控制视频文件的帧率
 
     public static int mRecorderBitRate = 3 * 1024 * 1024; //控制视频文件的大小
 
@@ -21,6 +21,10 @@ public class RecorderParameter {
 
     public static int mDefaultHeight = 1080; // 默认设置的高度
 
+    public static byte[] buffer = new byte[mDefaultHeight * mDefaultWidth * 3 / 2];
+
     public static String folderName = "RecordVideo";
+
+    public static String recorderKey = "recorder_size";
 
 }

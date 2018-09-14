@@ -30,10 +30,15 @@ import android.view.View;
 import android.view.View.OnLayoutChangeListener;
 import android.view.Window;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.twovideo.ui.SettingsActivity;
+import com.example.twovideo.util.PreviewParameter;
+import com.example.twovideo.util.RecorderParameter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -98,9 +103,9 @@ import java.util.List;
  *
  *
  * */
-public class MainActivity extends Activity implements MediaRecorder.OnErrorListener, MediaRecorder.OnInfoListener, Camera.PreviewCallback {
+public class MainActivity extends Activity implements MediaRecorder.OnErrorListener, MediaRecorder.OnInfoListener, View.OnClickListener {
 
-    private static final String TAG = "liu";
+    private static final String TAG = "MainActivity";
     private static final boolean DEBUG = true;
     private static final boolean DEBUG_TEST = true;
     private static final int MAX_NUM_OF_CAMERAS = 2;
@@ -127,6 +132,7 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
     private TextView mRecordTime1;
     private TextView mRecordTime2;
     private TextView mRecordTime3;
+    private ImageView icSetting;
     private BroadcastReceiver mReceiver;
     private static final int VIDEO0 = 0;
     private static final int VIDEO1 = 1;
@@ -155,11 +161,8 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
 
     private NotificationBack background;
 
-    @Override
-    public void onPreviewFrame(byte[] bytes, Camera camera) {
-        Log.i(TAG, "bytes: " + bytes.length);
-        camera.addCallbackBuffer(bytes);
-    }
+    private Intent intent;
+    private int REQUEST_CODE = 1;
 
     // 更新计时数字显示
     private class MainHandler extends Handler {
@@ -312,7 +315,6 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
 
     public void onCtrlMenuBarClick(View view) {
         int id = view.getId();
-        Log.d(TAG, "onCtrlMenuBarClick id=" + id);
         switch (id) {
             case R.id.recordbutton:
                 int cameraid = mService.isUVCCameraSonix(cameraid0);
@@ -402,7 +404,6 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate start");
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
         startVideoService();
@@ -421,6 +422,8 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
         mRecordTime1 = (TextView) findViewById(R.id.recording_time1);
         mRecordTime2 = (TextView) findViewById(R.id.recording_time2);
         mRecordTime3 = (TextView) findViewById(R.id.recording_time3);
+        icSetting = (ImageView) findViewById(R.id.ic_settings);
+        icSetting.setOnClickListener(this);
         RelativeLayout layout = (RelativeLayout) findViewById(R.id.surface2);
         if (!mIsSupport2Video)
             layout.setVisibility(View.GONE);
@@ -489,6 +492,35 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
         registerReceiver(mReceiver, filter);
     }
 
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.ic_settings:
+                if (getRecordingState(cameraid0) || getRecordingState(cameraid1) || getRecordingState(cameraid2) || getRecordingState(cameraid3)) {
+                    showAlertDialog(getResources().getString(R.string.dialog_alert_title_1), getResources().getString(R.string.dialog_alert_message_1), 1);
+                } else {
+                    intent = new Intent(MainActivity.this, SettingsActivity.class);
+                    startActivityForResult(intent, REQUEST_CODE);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == 2) {
+            if (requestCode == 1) {
+                int previewExtra = data.getIntExtra(PreviewParameter.previewKey, 0);
+                int recorderExtra = data.getIntExtra(RecorderParameter.recorderKey, 0);
+                Log.d("hahaha", "previewExtra is " + previewExtra + ",recorderExtra is " + recorderExtra);
+                initVideoView();
+            }
+        }
+    }
+
     // 检测自身权限情况，如果无权限，则去请求权限
     private void initPermission() {
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -542,7 +574,8 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
     @Override
     protected void onDestroy() {
         // TODO Auto-generated method stub
-        Log.d(TAG, "##########onDestroy#############");
+        Log.d("heeee", "##########onDestroy#############");
+
         if (mService != null) {
             int cameraid = mService.isUVCCameraSonix(cameraid0);
             if (cameraid == cameraid0) {
@@ -559,7 +592,6 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
         super.onDestroy();
     }
 
-    //
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -582,7 +614,6 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
                     }
                     if (cameraid == cameraid0) {
                         if (getRecordingState(cameraid0)) {
-                            //startVideoRecording();
                             mService.startRender(cameraid0, surface);
                             mRecordButton.setImageResource(R.drawable.pause_select);
                             mRecordTime.setVisibility(View.VISIBLE);
@@ -593,9 +624,7 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
                         }
                     } else {
                         if (getRecordingState(cameraid)) {
-                            //startVideoRecording();
                             startPreview(cameraid0, surface);
-                            //mService.startRender(cameraid0, surface);
                             mRecordButton.setImageResource(R.drawable.pause_select);
                             mRecordTime.setVisibility(View.VISIBLE);
                         } else {
@@ -836,21 +865,18 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
 
     @Override
     public void onBackPressed() {
-        Log.d(TAG, "*****onBackPressed()*****");
         if (!getRecordingState(cameraid0) && !getRecordingState(cameraid1) && !getRecordingState(cameraid2) && !getRecordingState(cameraid3)) {
             stopVideoService();
             finish();
         } else {
-            Log.d("liu", "*****showAlertDialog()*****");
-            showAlertDialog();
+            showAlertDialog(getResources().getString(R.string.dialog_alert_title), getResources().getString(R.string.dialog_alert_message), 0);
         }
-
     }
 
-    private void showAlertDialog() {
+    private void showAlertDialog(String title, String message, final int type) {
         new AlertDialog.Builder(MainActivity.this)
-                .setTitle(getResources().getString(R.string.dialog_alert_title))
-                .setMessage(getResources().getString(R.string.dialog_alert_message))
+                .setTitle(title)
+                .setMessage(message)
                 .setPositiveButton(getResources().getString(R.string.dialog_alert_button_ok), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
@@ -882,7 +908,14 @@ public class MainActivity extends Activity implements MediaRecorder.OnErrorListe
                                 mRecordButton3.setImageResource(R.drawable.record_select);
                             }
                         }
-                        finish();
+                        if (type == 0) {
+                            finish();
+                        } else if (type == 1) {
+                            intent = new Intent(MainActivity.this, SettingsActivity.class);
+                            startActivity(intent);
+                            unbindVideoService();
+                            finish();
+                        }
                     }
                 }).setNegativeButton(getResources().getString(R.string.dialog_alert_button_cancle), new DialogInterface.OnClickListener() {
             @Override

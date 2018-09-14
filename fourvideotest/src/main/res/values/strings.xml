@@ -5,21 +5,52 @@
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string>
     <string name="time">time</string>
-	<string name="dialog_alert_title">系统提示</string>
-	<string name="dialog_alert_message">检测到应用正在录制，是否结束录制并退出</string>
-	<string name="dialog_alert_button_ok">确定</string>
-	<string name="dialog_alert_button_cancle">取消</string>
-	<string name="application_notification_title">正在后台运行</string>
-	<string name="application_notification_content">触摸查看详细情况</string>
+    <string name="dialog_alert_title">系统提示</string>
+    <string name="dialog_alert_title_1">温馨提示</string>
+    <string name="dialog_alert_message">检测到应用正在录制，是否结束录制并退出</string>
+    <string name="dialog_alert_message_1">检测到应用正在录制，进入设置会强制结束录制</string>
+    <string name="dialog_alert_button_ok">确定</string>
+    <string name="dialog_alert_button_cancle">取消</string>
+    <string name="application_notification_title">正在后台运行</string>
+    <string name="application_notification_content">触摸查看详细情况</string>
+    <string name="camera_preview_size">预览分辨率</string>
+    <string name="camera_recorder_size">录像分辨率</string>
 
-	<string-array name="screen_numbers">
-		<item>First_</item>
-		<item>Second_</item>
-		<item>Third_</item>
-		<item>Fourth_</item>
-		<item>Fifth_</item>
-		<item>Sixth_</item>
-		<item>Seventh_</item>
-		<item>Eighth_</item>
-	</string-array>
+    <string-array name="screen_numbers">
+        <item>First_</item>
+        <item>Second_</item>
+        <item>Third_</item>
+        <item>Fourth_</item>
+        <item>Fifth_</item>
+        <item>Sixth_</item>
+        <item>Seventh_</item>
+        <item>Eighth_</item>
+    </string-array>
+
+    <string-array name="camera_preview_size">
+        <item>1080P</item>
+        <item>720P</item>
+    </string-array>
+
+    <string-array name="camera_preview_width">
+        <item>1920</item>
+        <item>1280</item>
+    </string-array>
+
+    <string-array name="camera_preview_height">
+        <item>1080</item>
+        <item>720</item>
+    </string-array>
+
+    <string-array name="camera_recorder_width">
+        <item>1920</item>
+        <item>1280</item>
+    </string-array>
+
+    <string-array name="camera_recorder_height">
+        <item>1080</item>
+        <item>720</item>
+    </string-array>
+
+    <string name="title_activity_settings">SettingsActivity</string>
 </resources>

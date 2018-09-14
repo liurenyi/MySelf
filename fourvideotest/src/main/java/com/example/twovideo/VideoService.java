@@ -25,7 +25,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.example.twovideo.VideoStorage.OnMediaSavedListener;
+import com.example.twovideo.util.PreviewParameter;
 import com.example.twovideo.util.RecorderParameter;
+import com.example.twovideo.util.SharedUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +40,8 @@ public class VideoService extends Service implements
         MediaRecorder.OnErrorListener, ServiceData,
         MediaRecorder.OnInfoListener {
 
-    private static final String TAG = "liu";
+    private static final String TAG = "VideoService";
+
     private static final boolean DEBUG = true;
     private static final int SAVE_VIDEO = 8;
     private static final int MAX_NUM_OF_CAMERAS = 8;
@@ -192,8 +195,8 @@ public class VideoService extends Service implements
     }
 
 
-    class CameraErrorCallback
-            implements Camera.ErrorCallback {
+    class CameraErrorCallback implements Camera.ErrorCallback {
+
         private static final String TAG = "CameraErrorCallback";
 
         @Override
@@ -304,7 +307,13 @@ public class VideoService extends Service implements
     }
 
     private int openCamera(int index) {
+
         if (mCameraDevice[index] != null) {
+            mCameraDevice[index].addCallbackBuffer(null);
+            mCameraDevice[index].setPreviewCallbackWithBuffer(null);
+//            Parameters parameters = mCameraDevice[index].getParameters();
+//            parameters.setPreviewSize(1280,720);
+//            mCameraDevice[index].setParameters(parameters);
             return 0;
         }
         try {
@@ -312,14 +321,10 @@ public class VideoService extends Service implements
             if (index >= 4 && index <= 7) {
 //                mCameraDevice[index].setAnalogInputColor(67, 50, 100); //setting brightness and so on  暂时注释掉
                 // int status = Camera.getCVBSInStatus(index);
-                //	Log.d(TAG,"cvbs cameraid=" + index + " status=" + status);
+                // Log.d(TAG,"cvbs cameraid=" + index + " status=" + status);
             }
         } catch (Exception ex) {
             mCameraDevice[index] = null;
-//            if (DEBUG) {
-//                Log.e(TAG, "Camera id=" + index + " does not exist! can not be opened.");
-//                Log.e(TAG, ex.toString());
-//            }
             return -1;
         }
         return 0;
@@ -328,15 +333,15 @@ public class VideoService extends Service implements
 
     public void closeCamera(int index) {
         if (mCameraDevice[index] == null) {
-            Log.d(TAG, "already stopped.");
             return;
         }
+        mCameraDevice[index].addCallbackBuffer(null);
+        mCameraDevice[index].setPreviewCallbackWithBuffer(null);
         mCameraDevice[index].setErrorCallback(null);
         mCameraDevice[index].release();
         mCameraDevice[index] = null;
         mPreviewing[index] = false;
         mMediaRecorderRecording[index] = false;
-        Log.d(TAG, "closeCamera mMediaRecorderRecording=false");
     }
 
     public int startRender(int index, SurfaceTexture surfaceTexture) {
@@ -378,17 +383,25 @@ public class VideoService extends Service implements
 
         if (mPreviewing[index]) {
             try {
-                Log.d(TAG, "mCameraDevice[index] = " + mCameraDevice[index]);
                 mCameraDevice[index].setPreviewTexture(surfaceTexture);
             } catch (IOException ex) {
                 mPreviewing[index] = false;
-                //closeCamera();
                 Log.e(TAG, "startPreview failed", ex);
                 return FAIL;
             }
         } else {
             mCameraDevice[index].setErrorCallback(mErrorCallback);
             Parameters param = mCameraDevice[index].getParameters();
+            if (SharedUtil.getShared(mContext, PreviewParameter.previewKey, 0) == 0) {
+                param.setPreviewSize(PreviewParameter.mDefaultWidth, PreviewParameter.mDefaultHeight);
+            } else {
+                int previewIndex = SharedUtil.getShared(mContext, PreviewParameter.previewKey, 0);
+                String[] arrayWidth = getResources().getStringArray(R.array.camera_preview_width);
+                String[] arrayHeight = getResources().getStringArray(R.array.camera_preview_height);
+                param.setPreviewSize(Integer.parseInt(arrayWidth[previewIndex]), Integer.parseInt(arrayHeight[previewIndex]));
+                Log.d("liu", "preview width:" + arrayWidth[previewIndex] + ",height:" + arrayHeight[previewIndex]);
+            }
+
             List<Size> sizes = param.getSupportedPreviewSizes();
             for (Size size : sizes) {
                 Log.d("zhao", "size.width=" + size.width + " height" + size.height);
@@ -396,9 +409,10 @@ public class VideoService extends Service implements
             try {
                 //mCameraDevice[index].setDisplayOrientation(180);
                 mCameraDevice[index].setPreviewTexture(surfaceTexture);
+
                 mCameraDevice[index].addCallbackBuffer(preBuffer);
                 mCameraDevice[index].setPreviewCallbackWithBuffer(new CameraPreviewFrame());
-                //mCameraDevice[index].setPreviewCallback(new CameraPreviewFrame());
+                mCameraDevice[index].setParameters(param);
                 mCameraDevice[index].startPreview();
 
                 Log.d("liu", "index为" + index + "开启预览成功");
@@ -509,7 +523,6 @@ public class VideoService extends Service implements
         //stopPreview();
         // Unlock the camera object before passing it to media recorder.
         mCameraDevice[index].unlock();
-
         mMediaRecorder[index].setCamera(mCameraDevice[index]);
         if (mRecorderAudio[index]) {
             mMediaRecorder[index].setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
@@ -524,8 +537,9 @@ public class VideoService extends Service implements
         Parameters parameters = null;
         try {
             parameters = mCameraDevice[index].getParameters();
+            parameters.setPreviewSize(PreviewParameter.mDefaultWidth, PreviewParameter.mDefaultHeight);
         } catch (Exception ex) {
-            Log.e(TAG, "getParameters:" + ex);
+            Log.e(TAG, "getParameters is fail!");
         }
 
         if (parameters != null) {
@@ -567,11 +581,10 @@ public class VideoService extends Service implements
 
                     }
                 }
-                Log.d("liu", "set video width:" + width + ",height:" + height);
-                mMediaRecorder[index].setVideoSize(RecorderParameter.mDefaultWidth, RecorderParameter.mDefaultHeight);
+                setVideoFrame(index);
             }
         } else {
-            mMediaRecorder[index].setVideoSize(mVideoWidth[index], mVideoHeight[index]);
+            setVideoFrame(index);
         }
 
         mMediaRecorder[index].setVideoEncodingBitRate(mRecorderBitRate[index]);
@@ -585,20 +598,34 @@ public class VideoService extends Service implements
             // mMediaRecorder[index].setVideoSize(mProfile[index].videoFrameWidth, mProfile[index].videoFrameHeight);
         }
         mVideoFilename[index] = generateVideoFilename(index, mOutFormat[index]);
-        Log.d(TAG, "mVideoFilename= " + mVideoFilename[index]);
         mMediaRecorder[index].setOutputFile(mVideoFilename[index]);
-        /*
-        try {
-            mMediaRecorder[index].prepare();
-			//mMediaRecorder[index].start(); // start recording
-        } catch (IOException e) {
-            Log.e(TAG, "prepare failed for " + mVideoFilename, e);
-            releaseMediaRecorder(index);
-            throw new RuntimeException(e);
-        }*/ // delete by liurenyi
-
         mMediaRecorder[index].setOnErrorListener(this);
         mMediaRecorder[index].setOnInfoListener(this);
+    }
+
+    /**
+     * 获取录像是否设定了分辨率，0表示1080P，1表示720P
+     *
+     * @return
+     */
+    private int getSharedRecorder() {
+        return SharedUtil.getShared(mContext, RecorderParameter.recorderKey, 0);
+    }
+
+    /**
+     * 设置录制视频文件的分辨率
+     *
+     * @param index
+     */
+    private void setVideoFrame(int index) {
+        Log.i("hahaha", "getSharedRecorder is " + getSharedRecorder());
+        if (getSharedRecorder() == 0) {
+            mMediaRecorder[index].setVideoSize(RecorderParameter.mDefaultWidth, RecorderParameter.mDefaultHeight);
+        } else {
+            String[] recorderWidth = getResources().getStringArray(R.array.camera_recorder_width);
+            String[] recorderHeight = getResources().getStringArray(R.array.camera_recorder_height);
+            mMediaRecorder[index].setVideoSize(Integer.parseInt(recorderWidth[getSharedRecorder()]), Integer.parseInt(recorderHeight[getSharedRecorder()]));
+        }
     }
 
     private void cleanupEmptyFile(int index) {
@@ -652,6 +679,8 @@ public class VideoService extends Service implements
             return FAIL;
         }
 
+        //closeCamera(index);
+
         openCamera(index);
 
         if (surfaceTexture != null) {
@@ -663,6 +692,9 @@ public class VideoService extends Service implements
         if (mMediaRecorderRecording[index]) {
             if (isUVCCameraSonix(index) == index) {
                 try {
+                    Parameters parameters = mCameraDevice[index].getParameters();
+                    parameters.setPreviewSize(PreviewParameter.mDefaultWidth, PreviewParameter.mDefaultHeight);
+                    mCameraDevice[index].setParameters(parameters);
                     mCameraDevice[index].setPreviewTexture(surfaceTexture);
                 } catch (IOException io) {
                     Log.e(TAG, "startVideoRecording setPreviewTexture set error!!");
@@ -684,9 +716,9 @@ public class VideoService extends Service implements
         try {
             mMediaRecorder[index].prepare(); // add by liurenyi
             mMediaRecorder[index].start(); // Recording is now started
-
-            byte[] buffer = new byte[1920 * 1080 * 3 / 2];
-            mCameraDevice[index].addCallbackBuffer(buffer);
+            mCameraDevice[index].addCallbackBuffer(null);
+            mCameraDevice[index].setPreviewCallbackWithBuffer(null);
+            mCameraDevice[index].addCallbackBuffer(RecorderParameter.buffer);
             mCameraDevice[index].setPreviewCallbackWithBuffer(new CameraPreviewFrame());
 
         } catch (Exception e) {
@@ -730,10 +762,21 @@ public class VideoService extends Service implements
             if (!fail) {
                 saveVideo(index);
             }
-            releaseMediaRecorder(index);
+            releaseMediaRecorder(index,1);
         }
         return OK;
 
+    }
+
+    private void releaseMediaRecorder(int index,int type) {
+        Log.v(TAG, "Releasing media recorder.");
+        if (mMediaRecorder[index] != null) {
+            cleanupEmptyFile(index);
+            mMediaRecorder[index].reset();
+            mMediaRecorder[index].release();
+            mMediaRecorder[index] = null;
+        }
+        mVideoFilename[index] = null;
     }
 
     private void onUpdateTimes(int index, String times) {
@@ -786,22 +829,6 @@ public class VideoService extends Service implements
     void setPath() {
         boolean find = false;
         String path = null;
-        //StorageManager storageManager = getSystemService(StorageManager.class);
-        /*StorageManager storageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
-        StorageVolume[] infos = storageManager.getVolumeList();
-        for (StorageVolume info : infos) {
-            if (info != null) {
-                Log.d(TAG, "info=" + info.getDescription(this));
-                Log.d(TAG, "is isPrimary=" + info.isPrimary());
-                if (!info.isPrimary()) {
-                    find = true;
-                    Log.e(TAG, "path=" + info.getPath());
-                    path = info.getPath();
-                    break;
-                }
-
-            }
-        }*/
         if (path != null) {
             VideoStorage.setPath(path);
         } else {
@@ -847,6 +874,10 @@ public class VideoService extends Service implements
         // TODO Auto-generated method stub
         super.onDestroy();
         unregisterReceiver(mReceiver);
+        closeCamera(0);
+        closeCamera(1);
+        closeCamera(2);
+        closeCamera(3);
         Log.d(TAG, "videService onDestroy###############");
     }
 
